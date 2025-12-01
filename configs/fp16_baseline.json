@@ -3,13 +3,12 @@
   "description": "Standard FP16 precision without quantization. Best accuracy, highest memory usage.",
   "environment": {
     "MODEL_NAME": "codefactory4791/intent-classification-qwen",
-    "MAX_NUM_SEQS": "16",
     "MAX_MODEL_LEN": "512",
     "QUANTIZATION": "none",
-    "DTYPE": "auto",
-    "GPU_MEMORY_UTILIZATION": "0.95",
     "TRUST_REMOTE_CODE": "true",
-    "ENFORCE_EAGER": "true"
+    "BATCH_SIZE": "16",
+    "USE_BETTER_TRANSFORMER": "true",
+    "USE_COMPILE": "true"
   },
   "gpu": {
     "type": "A100-SXM4-40GB",

@@ -2,6 +2,15 @@
 
 This document provides a clear, sequential guide to get started. **Follow the steps in order.**
 
+## Important Note: Optimized Transformers (Not vLLM)
+
+This project uses **optimized Transformers** for fast classification inference, not vLLM. vLLM does not support classification models. We achieve comparable or better performance using:
+- BetterTransformer optimization
+- torch.compile (PyTorch 2.0+)
+- FP16 precision
+- Static batching
+- Optional quantization (BitsAndBytes, AWQ, GPTQ)
+
 ## Documentation Structure (Simplified)
 
 **Main Documentation:**
@@ -24,8 +33,8 @@ All other documentation has been consolidated into README.md for simplicity.
 
 **Step 2:** Setup environment
 ```bash
-git clone https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM.git
-cd Qwen-Qwen2.5-0.5B-Deployment-vLLM
+git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM.git
+cd Qwen-2.5-0.5B-Deployment-vLLM
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -64,21 +73,28 @@ python scripts/test_local_handler.py
 
 **Step 7:** Build Docker image
 ```bash
-docker build -t intent-classification-vllm:latest .
-docker tag intent-classification-vllm:latest ghcr.io/llmdeveloper47/qwen-qwen2.5-0.5b-deployment-vllm:latest
+docker build -t intent-classification-transformers:latest .
+docker tag intent-classification-transformers:latest ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest
 ```
 
 **Step 8:** Push to GitHub Container Registry
 ```bash
 echo $GITHUB_TOKEN | docker login ghcr.io -u llmdeveloper47 --password-stdin
-docker push ghcr.io/llmdeveloper47/qwen-qwen2.5-0.5b-deployment-vllm:latest
+docker push ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest
 ```
 
 **Step 9:** Create RunPod endpoint
 - Login to RunPod console
-- Create new endpoint with A100 GPU
-- Use image: `ghcr.io/llmdeveloper47/qwen-qwen2.5-0.5b-deployment-vllm:latest`
-- Set environment variables (see README.md "Step 7")
+- Create new endpoint with A100 GPU (or L40S, A10, etc.)
+- Use image: `ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest`
+- Set environment variables:
+  - MODEL_NAME=codefactory4791/intent-classification-qwen
+  - MAX_MODEL_LEN=512
+  - QUANTIZATION=none
+  - TRUST_REMOTE_CODE=true
+  - BATCH_SIZE=16
+  - USE_BETTER_TRANSFORMER=true
+  - USE_COMPILE=true
 - Copy endpoint ID to your `.env` file
 
 **Step 10:** Test endpoint
@@ -90,9 +106,9 @@ python scripts/test_endpoint.py --endpoint-id $RUNPOD_ENDPOINT_ID --api-key $RUN
 
 ### PHASE 4: Experiments (4-6 hours for full suite)
 
-**Step 11:** Run FP16 baseline experiments
+**Step 11:** Run FP16 baseline experiments with optimizations
 ```bash
-# Ensure QUANTIZATION=none in RunPod endpoint
+# Ensure QUANTIZATION=none and USE_BETTER_TRANSFORMER=true in RunPod endpoint
 for bs in 1 4 8 16 32; do
   python scripts/test_endpoint.py \
     --endpoint-id $RUNPOD_ENDPOINT_ID \
@@ -107,7 +123,7 @@ done
 
 **Step 12:** Run BitsAndBytes experiments
 ```bash
-# Update QUANTIZATION=bitsandbytes in RunPod endpoint
+# Update QUANTIZATION=bitsandbytes and USE_BETTER_TRANSFORMER=false in RunPod endpoint
 # Wait 2-3 minutes for restart
 # Then run same tests as Step 11, saving to results/experiments/bitsandbytes/
 ```
@@ -157,8 +173,8 @@ If you just want to deploy without experiments:
 
 ```bash
 # 1. Setup (15 min)
-git clone https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM.git
-cd Qwen-Qwen2.5-0.5B-Deployment-vLLM
+git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM.git
+cd Qwen-2.5-0.5B-Deployment-vLLM
 ./quickstart.sh
 
 # 2. Build & Push (15 min)
@@ -262,21 +278,29 @@ After completing experiments, you will have:
 
 ### "CUDA out of memory"
 
-Solution: Lower GPU_MEMORY_UTILIZATION to 0.85 or reduce MAX_NUM_SEQS to 8
+Solution: Reduce BATCH_SIZE to 8 or use quantization (bitsandbytes)
 
 ### "Endpoint timeout"
 
-Cause: Cold start (normal for first request, takes 30-60s)
+Cause: Cold start (normal for first request, takes 30-60s for model loading)
 
-### "vLLM won't install"
+### "BetterTransformer not applying"
 
-Solution: `pip install vllm --extra-index-url https://download.pytorch.org/whl/cu121`
+Cause: Model architecture may not support BetterTransformer with quantization
+
+Solution: Set USE_BETTER_TRANSFORMER=false when using quantization
+
+### "torch.compile fails"
+
+Cause: Some quantization methods are incompatible with torch.compile
+
+Solution: SET USE_COMPILE=false when using quantization
 
 ### "AWQ/GPTQ not working"
 
-Cause: Requires pre-quantized model
+Cause: Requires pre-quantized model or specific setup
 
-Solution: Skip AWQ/GPTQ and focus on FP16 and BitsAndBytes
+Solution: Focus on FP16 with optimizations and BitsAndBytes quantization
 
 **For detailed troubleshooting, see README.md "Troubleshooting" section**
 
@@ -292,6 +316,6 @@ Solution: Skip AWQ/GPTQ and focus on FP16 and BitsAndBytes
 
 ---
 
-**Repository:** https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM  
+**Repository:** https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM  
 **Model:** https://huggingface.co/codefactory4791/intent-classification-qwen
 

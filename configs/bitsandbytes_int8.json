@@ -3,13 +3,12 @@
   "description": "8-bit quantization using bitsandbytes. Good balance of speed, memory, and accuracy.",
   "environment": {
     "MODEL_NAME": "codefactory4791/intent-classification-qwen",
-    "MAX_NUM_SEQS": "16",
     "MAX_MODEL_LEN": "512",
     "QUANTIZATION": "bitsandbytes",
-    "DTYPE": "auto",
-    "GPU_MEMORY_UTILIZATION": "0.90",
     "TRUST_REMOTE_CODE": "true",
-    "ENFORCE_EAGER": "true"
+    "BATCH_SIZE": "16",
+    "USE_BETTER_TRANSFORMER": "false",
+    "USE_COMPILE": "false"
   },
   "gpu": {
     "type": "A100-SXM4-40GB",

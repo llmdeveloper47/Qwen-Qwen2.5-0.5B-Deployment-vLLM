@@ -1,5 +1,5 @@
-# Base image with vLLM, CUDA, and PyTorch pre-installed
-FROM runpod/worker-v1-vllm:latest
+# Base image with CUDA and PyTorch pre-installed
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

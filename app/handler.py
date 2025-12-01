@@ -1,6 +1,6 @@
 """
-RunPod Handler for Intent Classification using vLLM
-This handler wraps the vLLM classification model for RunPod serverless deployment.
+RunPod Handler for Intent Classification using Optimized Transformers
+This handler uses optimized transformers for fast classification inference.
 """
 
 import os
@@ -8,8 +8,9 @@ import time
 import logging
 from typing import Any, Dict, List, Optional, Union
 
+import torch
 import runpod
-from vllm import LLM
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 # Configure logging
 logging.basicConfig(
@@ -20,56 +21,105 @@ logger = logging.getLogger(__name__)
 
 # Read configuration from environment variables
 MODEL_NAME = os.getenv("MODEL_NAME", "codefactory4791/intent-classification-qwen")
-MAX_NUM_SEQS = int(os.getenv("MAX_NUM_SEQS", "16"))
 MAX_MODEL_LEN = int(os.getenv("MAX_MODEL_LEN", "512"))
 QUANTIZATION = os.getenv("QUANTIZATION", "none")
-DTYPE = os.getenv("DTYPE", "auto")
-GPU_MEMORY_UTILIZATION = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.95"))
 TRUST_REMOTE_CODE = os.getenv("TRUST_REMOTE_CODE", "true").lower() == "true"
-ENFORCE_EAGER = os.getenv("ENFORCE_EAGER", "true").lower() == "true"
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "16"))
+USE_BETTER_TRANSFORMER = os.getenv("USE_BETTER_TRANSFORMER", "true").lower() == "true"
+USE_COMPILE = os.getenv("USE_COMPILE", "true").lower() == "true"
 
-logger.info(f"Starting vLLM handler with configuration:")
+logger.info(f"Starting optimized classification handler with configuration:")
 logger.info(f"  MODEL_NAME: {MODEL_NAME}")
-logger.info(f"  MAX_NUM_SEQS: {MAX_NUM_SEQS}")
 logger.info(f"  MAX_MODEL_LEN: {MAX_MODEL_LEN}")
 logger.info(f"  QUANTIZATION: {QUANTIZATION}")
-logger.info(f"  DTYPE: {DTYPE}")
-logger.info(f"  GPU_MEMORY_UTILIZATION: {GPU_MEMORY_UTILIZATION}")
 logger.info(f"  TRUST_REMOTE_CODE: {TRUST_REMOTE_CODE}")
-logger.info(f"  ENFORCE_EAGER: {ENFORCE_EAGER}")
+logger.info(f"  BATCH_SIZE: {BATCH_SIZE}")
+logger.info(f"  USE_BETTER_TRANSFORMER: {USE_BETTER_TRANSFORMER}")
+logger.info(f"  USE_COMPILE: {USE_COMPILE}")
 
-# Initialize vLLM model once at startup
-# Use task="classify" for classification models
-logger.info("Initializing vLLM model...")
+# Initialize model once at startup
+logger.info("Initializing model with optimizations...")
 start_time = time.time()
 
 try:
-    # Handle quantization parameter
-    quantization_param = None if QUANTIZATION == "none" else QUANTIZATION
+    # Load tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=TRUST_REMOTE_CODE)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
     
-    LLM_INSTANCE = LLM(
-        model=MODEL_NAME,
-        task="classify",
-        max_num_seqs=MAX_NUM_SEQS,
-        max_model_len=MAX_MODEL_LEN,
-        quantization=quantization_param,
-        dtype=DTYPE,
-        gpu_memory_utilization=GPU_MEMORY_UTILIZATION,
-        trust_remote_code=TRUST_REMOTE_CODE,
-        enforce_eager=ENFORCE_EAGER,
-    )
+    # Determine device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Load model with quantization
+    if QUANTIZATION == "bitsandbytes":
+        from transformers import BitsAndBytesConfig
+        quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            MODEL_NAME,
+            quantization_config=quantization_config,
+            device_map="auto",
+            trust_remote_code=TRUST_REMOTE_CODE
+        )
+    elif QUANTIZATION == "awq":
+        model = AutoModelForSequenceClassification.from_pretrained(
+            MODEL_NAME,
+            device_map="auto",
+            trust_remote_code=TRUST_REMOTE_CODE
+        )
+    elif QUANTIZATION == "gptq":
+        model = AutoModelForSequenceClassification.from_pretrained(
+            MODEL_NAME,
+            device_map="auto",
+            trust_remote_code=TRUST_REMOTE_CODE
+        )
+    else:
+        # No quantization - use FP16
+        model = AutoModelForSequenceClassification.from_pretrained(
+            MODEL_NAME,
+            torch_dtype=torch.float16,
+            trust_remote_code=TRUST_REMOTE_CODE
+        )
+        model = model.to(device)
+    
+    # Set to evaluation mode
+    model.eval()
+    
+    # Apply BetterTransformer optimization if enabled and supported
+    if USE_BETTER_TRANSFORMER and QUANTIZATION == "none":
+        try:
+            model = model.to_bettertransformer()
+            logger.info("  Applied BetterTransformer optimization")
+        except Exception as e:
+            logger.warning(f"  Could not apply BetterTransformer: {e}")
+    
+    # Apply torch.compile if enabled (PyTorch 2.0+)
+    if USE_COMPILE and QUANTIZATION == "none" and hasattr(torch, "compile"):
+        try:
+            model = torch.compile(model, mode="reduce-overhead")
+            logger.info("  Applied torch.compile optimization")
+        except Exception as e:
+            logger.warning(f"  Could not apply torch.compile: {e}")
     
     load_time = time.time() - start_time
-    logger.info(f"✓ Model loaded successfully in {load_time:.2f}s")
+    logger.info(f"Model loaded successfully in {load_time:.2f}s")
+    logger.info(f"  Device: {device}")
+    logger.info(f"  Num labels: {model.config.num_labels}")
+    
+    # Store global references
+    MODEL = model
+    TOKENIZER = tokenizer
+    DEVICE = device
     
 except Exception as e:
-    logger.error(f"✗ Failed to load model: {str(e)}")
+    logger.error(f"Failed to load model: {str(e)}")
+    import traceback
+    traceback.print_exc()
     raise
 
 
 def classify_batch(prompts: List[str]) -> List[Dict[str, Any]]:
     """
-    Run classification on a batch of prompts.
+    Run classification on a batch of prompts using optimized inference.
     
     Args:
         prompts: List of text prompts to classify
@@ -80,23 +130,41 @@ def classify_batch(prompts: List[str]) -> List[Dict[str, Any]]:
     try:
         start_time = time.time()
         
-        # Run classification
-        outputs = LLM_INSTANCE.classify(prompts)
+        # Tokenize batch
+        inputs = TOKENIZER(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=MAX_MODEL_LEN,
+            return_tensors="pt"
+        ).to(DEVICE)
+        
+        # Run inference with no gradient computation
+        with torch.no_grad():
+            outputs = MODEL(**inputs)
+            logits = outputs.logits
+            
+            # Get probabilities using softmax
+            probs = torch.softmax(logits, dim=-1)
+            
+            # Get predicted classes and confidence scores
+            confidence_scores, predicted_classes = torch.max(probs, dim=-1)
         
         inference_time = time.time() - start_time
         
+        # Convert to CPU and numpy for processing
+        probs_np = probs.cpu().numpy()
+        predicted_classes_np = predicted_classes.cpu().numpy()
+        confidence_scores_np = confidence_scores.cpu().numpy()
+        
         # Process results
         results = []
-        for idx, output in enumerate(outputs):
-            # Extract probabilities and predicted class
-            probs = output.outputs.probs.tolist()
-            predicted_class = probs.index(max(probs))
-            
+        for idx in range(len(prompts)):
             result = {
                 "prompt": prompts[idx],
-                "predicted_class": predicted_class,
-                "confidence": max(probs),
-                "probabilities": probs,
+                "predicted_class": int(predicted_classes_np[idx]),
+                "confidence": float(confidence_scores_np[idx]),
+                "probabilities": probs_np[idx].tolist(),
             }
             results.append(result)
         

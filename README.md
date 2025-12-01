@@ -29,7 +29,7 @@ This repository provides an end-to-end solution for:
 - [Environment Setup](#step-2-environment-setup)
 - [Model Download](#step-3-download-and-verify-model)
 
-**PART 2: LOCAL / RUNPOD TESTING (Optional)**
+**PART 2: LOCAL TESTING (Optional)**
 - [Local Benchmarking](#step-4-optional-local-benchmarking)
 - [Test Handler Locally](#step-5-optional-test-handler-locally)
 
@@ -66,7 +66,7 @@ This repository provides an end-to-end solution for:
    - Save the key securely
 
 **GitHub Account:**
-1. Fork or clone repository: https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM
+1. Fork or clone repository: https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM
 2. Generate Personal Access Token:
    - Settings → Developer settings → Personal access tokens
    - Create token with `repo` and `write:packages` scopes
@@ -79,7 +79,7 @@ This repository provides an end-to-end solution for:
 - Git
 - Docker 20.10+
 
-**For Local GPU / RunPod Testing (Optional):**
+**For Local GPU Testing (Optional):**
 - NVIDIA GPU with 16GB+ VRAM
 - CUDA Toolkit 12.1+
 - NVIDIA drivers
@@ -117,11 +117,11 @@ brew install python@3.10 git
 ### Clone Repository
 
 ```bash
-git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM.git
-cd Qwen-2.5-0.5B-Deployment-vLLM
+git clone https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM.git
+cd Qwen-Qwen2.5-0.5B-Deployment-vLLM
 ```
 
-### Create Virtual Environment ( not required for RunPod Setup )
+### Create Virtual Environment
 
 ```bash
 python3 -m venv venv
@@ -134,7 +134,7 @@ venv\Scripts\activate  # Windows
 
 ```bash
 pip install --upgrade pip
-pip install -r requirements.txt --ignore-installed blinker
+pip install -r requirements.txt
 ```
 
 This installs:
@@ -165,7 +165,6 @@ Note: You will get the RUNPOD_ENDPOINT_ID after creating the endpoint in Step 7.
 ## Step 3: Download and Verify Model
 
 ```bash
-pip install hf_transfer
 python scripts/download_model.py
 ```
 
@@ -199,34 +198,13 @@ This creates `models/model_info.json` with model metadata.
 
 ---
 
-# PART 2: LOCAL GPU / Runpod TESTING (Optional)
+# PART 2: LOCAL TESTING (Optional)
 
-Note: Local testing requires an NVIDIA GPU. If you are comfortable using RunPod clone the repo on a A100 GPU instance and run the scripts there for benchmakring. Skip to Part 3 if you don't have a GPU.
-
-1. Create a RunPod Pod (not serverless)
-2. Clone the repository
-3. pip install -r requirements.txt --ignore-installed blinker 
-4. python scripts/download_model.py (downloads on RunPod)
-5. python scripts/benchmark_local.py (runs on RunPod's A100) ( more details below )
-   
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt --ignore-installed blinker
-```
+Note: Local testing requires an NVIDIA GPU. Skip to Part 3 if you don't have a GPU.
 
 ## Step 4 (Optional): Local Benchmarking
 
-Test different quantization methods local GPU / Runpod before deploying:
-```bash
-# Uninstall current torch and vllm
-pip uninstall vllm torch torchvision torchaudio -y
-
-# Install stable PyTorch 2.4.0
-pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-
-# Reinstall vLLM (it will work with PyTorch 2.4.0)
-pip install vllm==0.6.2 --no-cache-dir
-```
+Test different quantization methods locally before deploying:
 
 ### Test FP16 Baseline
 
@@ -340,7 +318,7 @@ This takes 10-15 minutes as it pre-downloads the model.
 
 ```bash
 docker tag intent-classification-vllm:latest \
-  ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest
+  ghcr.io/llmdeveloper47/qwen-qwen2.5-0.5b-deployment-vllm:latest
 ```
 
 ### Push to Registry
@@ -350,7 +328,7 @@ docker tag intent-classification-vllm:latest \
 echo $GITHUB_TOKEN | docker login ghcr.io -u llmdeveloper47 --password-stdin
 
 # Push image
-docker push ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest
+docker push ghcr.io/llmdeveloper47/qwen-qwen2.5-0.5b-deployment-vllm:latest
 ```
 
 **Alternative: Use Makefile**
@@ -372,7 +350,7 @@ make build-push
    - GPU: Select "A100-SXM4-40GB"
    
 3. **Container Configuration:**
-   - Container Image: `ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest`
+   - Container Image: `ghcr.io/llmdeveloper47/qwen-qwen2.5-0.5b-deployment-vllm:latest`
    - Container Disk: 20 GB
    - Volume Disk: 0 GB
 
@@ -729,7 +707,7 @@ The notebook includes:
 ## Project Structure
 
 ```
-Qwen-2.5-0.5B-Deployment-vLLM/
+Qwen-Qwen2.5-0.5B-Deployment-vLLM/
 ├── README.md                          # This file
 ├── CONTRIBUTING.md                    # Contribution guidelines
 ├── requirements.txt                   # Python dependencies
@@ -1256,7 +1234,7 @@ Run experiments to find optimal for your specific latency requirements.
 ## Support and Resources
 
 ### Project Resources
-- **Repository:** https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM
+- **Repository:** https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM
 - **Model Card:** https://huggingface.co/codefactory4791/intent-classification-qwen
 - **Dataset:** https://huggingface.co/datasets/codefactory4791/amazon_test
 
@@ -1270,7 +1248,7 @@ Run experiments to find optimal for your specific latency requirements.
 
 1. Check the Troubleshooting section above
 2. Review error messages in RunPod logs
-3. Open an issue: https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM/issues
+3. Open an issue: https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM/issues
 4. Ask on RunPod Discord
 
 ---
@@ -1295,7 +1273,7 @@ MIT License - see LICENSE file for details.
   author={llmdeveloper47},
   year={2025},
   publisher={GitHub},
-  url={https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM}
+  url={https://github.com/llmdeveloper47/Qwen-Qwen2.5-0.5B-Deployment-vLLM}
 }
 ```
 

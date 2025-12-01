@@ -1,9 +1,11 @@
-# Core dependencies for vLLM inference and deployment
-vllm>=0.7.0
-torch>=2.5.0
+# Core dependencies for optimized transformers inference and deployment
+torch>=2.4.0
 transformers>=4.46.0
 datasets>=2.14.0
 peft>=0.7.0
+accelerate>=0.25.0
+optimum>=1.16.0
+bitsandbytes>=0.41.0
 
 # Hugging Face Hub integration
 huggingface-hub>=0.20.0

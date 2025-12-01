@@ -98,11 +98,13 @@ def load_test_data(dataset_name: str = "codefactory4791/amazon_test",
     return prompts, true_labels, id2label
 
 
-def initialize_model(model_id: str, quantization: str = "none") -> tuple:
-    """Initialize model and tokenizer with specified quantization."""
+def initialize_model(model_id: str, quantization: str = "none", 
+                    use_optimizations: bool = True) -> tuple:
+    """Initialize model and tokenizer with specified quantization and optimizations."""
     print(f"\nInitializing model...")
     print(f"  Model: {model_id}")
     print(f"  Quantization: {quantization}")
+    print(f"  Optimizations: {use_optimizations}")
     
     start = time.perf_counter()
     
@@ -126,11 +128,8 @@ def initialize_model(model_id: str, quantization: str = "none") -> tuple:
                 trust_remote_code=True
             )
         elif quantization == "awq":
-            from transformers import AwqConfig
-            quantization_config = AwqConfig(bits=4)
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_id,
-                quantization_config=quantization_config,
                 device_map="auto",
                 trust_remote_code=True
             )
@@ -141,7 +140,7 @@ def initialize_model(model_id: str, quantization: str = "none") -> tuple:
                 trust_remote_code=True
             )
         else:
-            # No quantization
+            # No quantization - use FP16
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_id,
                 torch_dtype=torch.float16,
@@ -150,6 +149,23 @@ def initialize_model(model_id: str, quantization: str = "none") -> tuple:
             model = model.to(device)
         
         model.eval()
+        
+        # Apply optimizations if enabled and quantization is "none"
+        if use_optimizations and quantization == "none":
+            # Apply BetterTransformer
+            try:
+                model = model.to_bettertransformer()
+                print(f"  Applied BetterTransformer optimization")
+            except Exception as e:
+                print(f"  Warning: Could not apply BetterTransformer: {e}")
+            
+            # Apply torch.compile if available (PyTorch 2.0+)
+            if hasattr(torch, "compile"):
+                try:
+                    model = torch.compile(model, mode="reduce-overhead")
+                    print(f"  Applied torch.compile optimization")
+                except Exception as e:
+                    print(f"  Warning: Could not apply torch.compile: {e}")
         
         load_time = time.perf_counter() - start
         print(f"  Model loaded in {load_time:.2f}s")
@@ -220,6 +236,7 @@ def run_benchmarks(model_id: str,
                    batch_sizes: List[int],
                    num_samples: int = 1000,
                    balance_lengths: bool = True,
+                   use_optimizations: bool = True,
                    output_dir: str = "./results/local_benchmarks") -> List[Dict]:
     """Run comprehensive benchmarks."""
     print("\n" + "=" * 70)
@@ -230,6 +247,7 @@ def run_benchmarks(model_id: str,
     print(f"Batch sizes: {batch_sizes}")
     print(f"Number of samples: {num_samples}")
     print(f"Balance sequence lengths: {balance_lengths}")
+    print(f"Use optimizations: {use_optimizations}")
     print("=" * 70)
     
     # Load test data
@@ -239,7 +257,7 @@ def run_benchmarks(model_id: str,
     )
     
     # Initialize model
-    model, tokenizer, device = initialize_model(model_id, quantization)
+    model, tokenizer, device = initialize_model(model_id, quantization, use_optimizations)
     
     # Run benchmarks for each batch size
     results = []
@@ -334,6 +352,18 @@ def main():
         help="Disable length balancing (use random sampling)"
     )
     parser.add_argument(
+        "--use-optimizations",
+        action="store_true",
+        default=True,
+        help="Enable optimizations (BetterTransformer, torch.compile)"
+    )
+    parser.add_argument(
+        "--no-optimizations",
+        action="store_false",
+        dest="use_optimizations",
+        help="Disable optimizations"
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default="./results/local_benchmarks",
@@ -352,6 +382,7 @@ def main():
         batch_sizes=batch_sizes,
         num_samples=args.num_samples,
         balance_lengths=args.balance_lengths,
+        use_optimizations=args.use_optimizations,
         output_dir=args.output_dir
     )
     
