@@ -33,8 +33,8 @@ All other documentation has been consolidated into README.md for simplicity.
 
 **Step 2:** Setup environment
 ```bash
-git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM.git
-cd Qwen-2.5-0.5B-Deployment-vLLM
+git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Inference-Deployment.git
+cd Qwen-2.5-0.5B-Inference-Deployment
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -74,19 +74,19 @@ python scripts/test_local_handler.py
 **Step 7:** Build Docker image
 ```bash
 docker build -t intent-classification-transformers:latest .
-docker tag intent-classification-transformers:latest ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest
+docker tag intent-classification-transformers:latest ghcr.io/llmdeveloper47/qwen-2.5-0.5b-inference-deployment:latest
 ```
 
 **Step 8:** Push to GitHub Container Registry
 ```bash
 echo $GITHUB_TOKEN | docker login ghcr.io -u llmdeveloper47 --password-stdin
-docker push ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest
+docker push ghcr.io/llmdeveloper47/qwen-2.5-0.5b-inference-deployment:latest
 ```
 
 **Step 9:** Create RunPod endpoint
 - Login to RunPod console
 - Create new endpoint with A100 GPU (or L40S, A10, etc.)
-- Use image: `ghcr.io/llmdeveloper47/qwen-2.5-0.5b-deployment-vllm:latest`
+- Use image: `ghcr.io/llmdeveloper47/qwen-2.5-0.5b-inference-deployment:latest`
 - Set environment variables:
   - MODEL_NAME=codefactory4791/intent-classification-qwen
   - MAX_MODEL_LEN=512
@@ -173,7 +173,7 @@ If you just want to deploy without experiments:
 
 ```bash
 # 1. Setup (15 min)
-git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM.git
+git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Inference-Deployment.git
 cd Qwen-2.5-0.5B-Deployment-vLLM
 ./quickstart.sh
 
@@ -316,6 +316,6 @@ Solution: Focus on FP16 with optimizations and BitsAndBytes quantization
 
 ---
 
-**Repository:** https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM  
+**Repository:** https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Inference-Deployment  
 **Model:** https://huggingface.co/codefactory4791/intent-classification-qwen
 
