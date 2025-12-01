@@ -198,7 +198,7 @@ This creates `models/model_info.json` with model metadata.
 
 ---
 
-# PART 2: LOCAL / runpod TESTING (Optional)
+# PART 2: LOCAL GPU / Runpod TESTING (Optional)
 
 Note: Local testing requires an NVIDIA GPU. If you are comfortable using RunPod clone the repo on a A100 GPU instance and run the scripts there for benchmakring. Skip to Part 3 if you don't have a GPU.
 
