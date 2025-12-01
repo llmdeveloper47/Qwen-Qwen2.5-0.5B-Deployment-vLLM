@@ -48,7 +48,9 @@ nano .env  # Add your RUNPOD_API_KEY
 
 **Step 4:** Download model
 ```bash
-python scripts/download_model.py
+pip install hf_transfer
+python scripts/download_model_safe.py
+-- python scripts/download_model.py
 ```
 
 ---
