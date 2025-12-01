@@ -134,7 +134,7 @@ venv\Scripts\activate  # Windows
 
 ```bash
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt --ignore-installed blinker
 ```
 
 This installs:
