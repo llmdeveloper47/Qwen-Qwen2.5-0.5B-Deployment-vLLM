@@ -121,7 +121,7 @@ git clone https://github.com/llmdeveloper47/Qwen-2.5-0.5B-Deployment-vLLM.git
 cd Qwen-2.5-0.5B-Deployment-vLLM
 ```
 
-### Create Virtual Environment
+### Create Virtual Environment ( not required for RunPod Setup )
 
 ```bash
 python3 -m venv venv
@@ -204,13 +204,13 @@ Note: Local testing requires an NVIDIA GPU. If you are comfortable using RunPod 
 
 1. Create a RunPod Pod (not serverless)
 2. Clone the repository
-3. pip install -r requirements.txt
+3. pip install -r requirements.txt --ignore-installed blinker 
 4. python scripts/download_model.py (downloads on RunPod)
 5. python scripts/benchmark_local.py (runs on RunPod's A100) ( more details below )
    
 ```bash
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt --ignore-installed blinker
 ```
 
 ## Step 4 (Optional): Local Benchmarking
