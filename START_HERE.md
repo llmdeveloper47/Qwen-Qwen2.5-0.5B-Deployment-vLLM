@@ -84,36 +84,55 @@ python scripts/benchmark_local.py \
 python scripts/test_local_handler.py
 ```
 
-**Step 7:** ONNX Runtime Optimization Benchmarks (Optional, Advanced)
+**Step 7:** FlashAttention 
 
-ONNX Runtime provides significant speedup through graph optimizations and operator fusion. Expected performance gains: 1.5-3x faster than standard PyTorch.
+FlashAttention  provides significant speedup. Expected performance gains: 1.5-6x faster than standard PyTorch.
 
 ```bash
 # Install ONNX Runtime dependencies
 pip install optimum[onnxruntime-gpu] onnx onnxruntime-gpu
 
+
+pip uninstall torch torchvision torchaudio -y
+rm -rf /usr/local/lib/python3.12/dist-packages/torch*
+rm -rf ~/.cache/pip
+
+# Fresh install from PyTorch
+pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir
+
+# Test torch ONLY (before anything else)
+python -c "import torch; print(f'Torch: {torch.__version__}')"
+
+# Test torchvision ONLY
+python -c "import torchvision; print(f'TorchVision: {torchvision.__version__}')"
+
+# If both work, test importing together
+python -c "
+import torch
+import torchvision
+from transformers import AutoModelForSequenceClassification
+print('All imports work!')
+"
+
 # Run ONNX Runtime benchmark
 python scripts/benchmark_local.py \
-  --quantization none \
-  --inference-engine onnx \
+  --quantization bitsandbytes \
+  --use-flash-attention \
   --batch-sizes 1,8,16,32 \
-  --num-samples 1000 \
-  --no-optimizations
-
-# Expected outcomes:
-# - First run: Converts model to ONNX (adds 30-60s)
-# - ONNX model cached to ./models_onnx/none/
-# - Results saved to results/local_benchmarks/none_onnx/
-# - 2-3x speedup at batch size 1
-# - 1.5-2x speedup at larger batches
+  --num-samples 1000
 ```
 
-**How ONNX Runtime Works:**
-- Converts PyTorch model to ONNX graph format
-- Applies graph optimizations (operator fusion, constant folding)
-- Uses optimized CUDA kernels
-- Reduces CPU overhead and kernel launch time
-- Cached for reuse in future runs
+**Step 8:** FlashAttention + BitsAndBytes Benchmarks (Optional, Advanced)
+```bash
+
+pip install accelerate
+
+python scripts/benchmark_local.py \
+  --quantization bitsandbytes \
+  --use-flash-attention \
+  --batch-sizes 1,8,16,32 \
+  --num-samples 1000
+```
 
 **Compare all methods:**
 ```bash
