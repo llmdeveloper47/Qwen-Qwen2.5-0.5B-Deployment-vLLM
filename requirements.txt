@@ -17,8 +17,8 @@ onnxruntime-gpu==1.18.1
 onnx==1.15.0
 
 # Hugging Face Hub integration
-huggingface-hub==0.20.3
-safetensors==0.4.2
+huggingface-hub==0.23.5
+safetensors==0.4.5
 
 # Load testing
 locust==2.32.0
