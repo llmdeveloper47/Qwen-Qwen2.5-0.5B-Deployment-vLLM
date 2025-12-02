@@ -166,13 +166,15 @@ def initialize_model(model_id: str, quantization: str = "none",
         
         # Load model with quantization
         if quantization == "bitsandbytes":
-                from transformers import BitsAndBytesConfig
-                quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-                model = AutoModelForSequenceClassification.from_pretrained(
-                    model_id,
-                    quantization_config=quantization_config,
-                    device_map="auto"
-                )
+            # Import accelerate explicitly (required for device_map)
+            import accelerate
+            from transformers import BitsAndBytesConfig
+            quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+            model = AutoModelForSequenceClassification.from_pretrained(
+                model_id,
+                quantization_config=quantization_config,
+                device_map="auto"
+            )
         else:
             # No quantization - load in FP16 for FlashAttention compatibility
             model = AutoModelForSequenceClassification.from_pretrained(
